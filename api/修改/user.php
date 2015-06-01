@@ -908,13 +908,14 @@ class User extends CI_Controller {
         $this->outputlib->output(STATUS_OK, '', array());
     }
 
+    //get the list of the user had hidden jobs
     public function get_hide_jobs() {
         $token = $this->input->get_post('token');
         
-        // Check parameters
-        if ($this->helperlib->hasEmptyParams(array($token))) {
-            $this->outputlib->error($this->lang->line('error_missing_parameters'));
-        }
+        // // Check parameters
+        // if ($this->helperlib->hasEmptyParams(array($token))) {
+        //     $this->outputlib->error($this->lang->line('error_missing_parameters'));
+        // }
         $user = $this->userlib->getUserProfile($token);
         if (!$user) {
             $this->outputlib->error($this->lang->line('error_token_not_exists'));
@@ -927,7 +928,7 @@ class User extends CI_Controller {
             FROM
                 (
                     SELECT *
-                    FROM action_jobs
+                    FROM ".TABLE_JOB_ACTIONS."
                     WHERE 
                         action = ?
                     AND user_id = ?
@@ -955,13 +956,53 @@ class User extends CI_Controller {
                     
                 ) xjobs
                     ON xjobs.id = hide.job_id
-            ORDER BY saved.timestamp DESC
+            ORDER BY hide.timestamp DESC
         ";
-        $data = array($user['id'], ACTION_HIDE_JOB);
-        $this->db->query($query, $data);
+        $data = array(ACTION_HIDE_JOB,$user['id']);
+        $results = $this->db->query($query, $data);
+        $results = $results->result_array();
         
-        $this->outputlib->output(STATUS_OK, '', array());
+        $jobs = array();
+        foreach ($results as $row) {
+            $row['company_logo'] = DEFAULT_COMPANY_LOGO;
+            $row['branch'] = '';
+            $row['summary'] = '...';
+            $row['date_due'] = '2015-06-30';
+            $jobs[] = $row;
+        }
+        
+        $output = array();
+        $output['jobs'] = $jobs;
+        $this->outputlib->output(STATUS_OK, '', $output);
     }
+
+    //action to remove the hidden job 
+    // public function remove_hide_job() {
+    //     $token = $this->input->get_post('token');
+    //     $job_id = $this->input->get_post('job_id');
+        
+    //     // Check parameters
+    //     if ($this->helperlib->hasEmptyParams(array($token, $job_id))) {
+    //         $this->outputlib->error($this->lang->line('error_missing_parameters'));
+    //     }
+    //     $user = $this->userlib->getUserProfile($token);
+    //     if (!$user) {
+    //         $this->outputlib->error($this->lang->line('error_token_not_exists'));
+    //     }
+        
+    //     // Keep record in database
+    //     $query = "
+    //         DELETE FROM ".TABLE_JOB_ACTIONS."
+    //         WHERE
+    //             user_id = ?
+    //         AND job_id = ?
+    //         AND action = ?
+    //     ";
+    //     $data = array($user['id'], $job_id, ACTION_HIDE_JOB);
+    //     $this->db->query($query, $data);
+        
+    //     $this->outputlib->output(STATUS_OK, '',  $data);
+    // }
     
     public function save_job() {
         $token = $this->input->get_post('token');
